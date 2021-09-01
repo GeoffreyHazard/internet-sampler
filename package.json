@@ -1,5 +1,6 @@
 {
   "name": "internet-sampler",
+  "homepage": "https://geoffreyhazard.github.io/internet-sampler/",
   "version": "0.1.0",
   "private": true,
   "dependencies": {
