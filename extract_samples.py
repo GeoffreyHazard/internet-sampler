@@ -5,6 +5,11 @@ import wave
 from scipy.io import wavfile
 from scipy import signal
 import numpy as np
+import struct
+
+# Set the threshold value for identifying drum segments
+threshold = 0.25
+freq_range = [100, 1000]
 
 def extract_drum_samples(audio_file):
   #print "Extracting drum samples from " + audio_file
@@ -13,8 +18,9 @@ def extract_drum_samples(audio_file):
   # Read the audio file and get the sample rate and data
   sample_rate, data = wavfile.read(audio_file)
 
+
   # Use a bandpass filter to isolate the frequency range of drums
-  filtered_data = bandpass_filter(data, sample_rate, [100, 1000])
+  filtered_data = bandpass_filter(data, sample_rate, freq_range)
 
   # Use a thresholding algorithm to identify segments of the audio that only contain drums
   drum_segments = detect_drum_segments(filtered_data, sample_rate)
@@ -23,18 +29,26 @@ def extract_drum_samples(audio_file):
   drum_samples = []
   for segment in drum_segments:
     sample_data = segment[1]
+
+    # Make sure sample_data is a sequence of floating-point numbers
+    if not isinstance(sample_data, (list, tuple)):
+      sample_data = [sample_data]
+    
+    # Convert the sample data from floating-point numbers to bytes
+    byte_data = struct.pack('f' * len(sample_data), *sample_data)
+
     sample_file = wave.open("drum_sample.wav", "wb")
     sample_file.setnchannels(1)
     sample_file.setsampwidth(2)
     sample_file.setframerate(sample_rate)
-    sample_file.writeframes(sample_data)
+
+    # Write the byte data to the file
+    sample_file.writeframes(byte_data)
     drum_samples.append("drum_sample.wav")
 
   return drum_samples
 
 def detect_drum_segments(audio_data, sample_rate):
-  # Set the threshold value for identifying drum segments
-  threshold = 0.5
 
   # Initialize variables to track the start and end of a drum segment
   start_time = None
@@ -45,7 +59,7 @@ def detect_drum_segments(audio_data, sample_rate):
 
   # Iterate through the audio data and detect drum segments
   for i, sample in enumerate(audio_data):
-    if sample > threshold:
+    if np.any(sample > threshold):
       # If this is the start of a drum segment, record the start time
       if start_time is None:
         start_time = i / sample_rate
@@ -61,19 +75,6 @@ def detect_drum_segments(audio_data, sample_rate):
 
   return drum_segments
 
-def bandpass_filter(audio_data, sample_rate, frequency_range):
-
-  # Calculate the Nyquist frequency
-  nyquist_frequency = sample_rate / 2
-
-  # Calculate the lower and upper bounds of the frequency range
-  lower_bound = frequency_range[0] / nyquist_frequency
-  upper_bound = frequency_range[1] / nyquist_frequency
-
-  # Calculate the filter coefficients
-  b, a = signal.butter(5, [lower_bound, upper_bound], btype='bandpass')
-
-  # Apply the filter to the audio data
-  filtered_data = signal.filtfilt(b, a, audio_data)
-
-  return filtered_data
+def bandpass_filter(data, sample_rate, freq_range):
+  b, a = signal.butter(5, freq_range, btype='bandpass', fs=sample_rate)
+  return signal.lfilter(b, a, data)

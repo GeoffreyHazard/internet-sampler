@@ -3,8 +3,10 @@
 import extract_samples
 
 if __name__ == '__main__' :
-    print("Extracting drum samples from audio files...")
     drum_samples = extract_samples.extract_drum_samples("Data/Birthday.wav")
-    for sample in drum_samples:
-        print("Drum sample: " + sample) 
+    print("Found " + str(len(drum_samples)) + " drum samples")
+
+    drum_samples = extract_samples.extract_drum_samples("Data/Standup.wav")
+    print("Found " + str(len(drum_samples)) + " drum samples")
+    
     print("Done!")
